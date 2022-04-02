@@ -1,4 +1,6 @@
 *.zip
+*.env
+*.vscode
 
 # Windows Installer files
 *.cab
@@ -32,3 +34,16 @@ opencv-4.x/*
 .DS_Store
 .AppleDouble
 .LSOverride
+
+# CMake Files
+CMakeLists.txt.user
+CMakeCache.txt
+CMakeFiles
+CMakeScripts
+Testing
+Makefile
+cmake_install.cmake
+install_manifest.txt
+compile_commands.json
+CTestTestfile.cmake
+_deps
