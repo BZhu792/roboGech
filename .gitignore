@@ -1,6 +1,4 @@
 *.zip
-*.DS_Store
-
 
 # Windows Installer files
 *.cab
@@ -29,3 +27,8 @@ build/*
 # OpenCV library - there's no need to commit so much information online
 # Add additional versions as neededs
 opencv-4.x/*
+
+# Apple Config files
+.DS_Store
+.AppleDouble
+.LSOverride
