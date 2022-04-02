@@ -1,0 +1,23 @@
+*.zip
+*.DS_Store
+
+
+# Windows Installer files
+*.cab
+*.msi
+*.msix
+*.msm
+*.msp
+
+# Windows shortcuts
+*.lnk
+
+# Compiled code -> no need for those .o files
+*.o
+*.pyc
+*.class
+
+# Runtime files
+*.log
+*.lock
+*.tmp
