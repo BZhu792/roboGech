@@ -1,0 +1,10 @@
+cmake_minimum_required(VERSION 2.8)
+project( SelfSortingBin )
+
+find_package(CURL REQUIRED) 
+include_directories(${CURL_INCLUDE_DIR})
+find_package( OpenCV REQUIRED )
+include_directories( ${OpenCV_INCLUDE_DIRS} )
+add_executable( SelfSortingBin opencv_receiver.cpp object_detection.cpp object_detection.h )
+target_link_libraries( SelfSortingBin ${OpenCV_LIBS} )
+target_link_libraries( SelfSortingBin ${CURL_LIBRARIES})
