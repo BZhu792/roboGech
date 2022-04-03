@@ -39,7 +39,7 @@ typedef enum {
 #define STEPPER_IN3 15 // GPIO pins 15 and 14 are swapped on the ESP32 CAM board
 #define STEPPER_IN4 14
 #define NUMBER_OF_STEPS_PER_REV 512
-#define DELAY_MS_PER_STEP 5
+#define DELAY_MS_PER_STEP 1
 
 static bin_t current_bin = DEFAULT_BIN;
 static volatile bin_t next_bin    = CAN_BIN;
@@ -84,6 +84,8 @@ void control_stepper(void * no_params) {
   pinMode(STEPPER_IN4, OUTPUT);
 
   while (true) {
+     Serial.println("  next bin " + next_bin);
+     Serial.println("  curr bin " + current_bin);
     if (next_bin != current_bin) {      
       // Calculate how many bins over the next bin is
       int moves = (current_bin <= next_bin) ? (next_bin - current_bin) : (next_bin + 4 - current_bin);
@@ -93,7 +95,7 @@ void control_stepper(void * no_params) {
       Serial.println("Num: " + num);
       
       for (int i = 0; i < num; i++) {
-        Serial.println("i: " + i);
+//        Serial.println("i: " + i);
         stepper_onestep();
       }
 
@@ -252,6 +254,6 @@ void stepper_onestep(void) {
  */
 void rgb_write(int red, int green, int blue) {
   analogWrite(RGB_RED, red);
-  analogWrite(RGB_GREEN, green);
+//  analogWrite(RGB_GREEN, green);
   analogWrite(RGB_BLUE, blue);
 }
