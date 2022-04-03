@@ -27,12 +27,19 @@
  * Camera and Server
  */
 #include <WebServer.h>
+#include <ArduinoWebsockets.h>
 #include <WiFi.h>
 #include <esp32cam.h>
+
+using namespace websockets;
+
+WebsocketsClient client;
 
 // Set to local network/hotspot
 const char* WIFI_SSID = "CPhone";
 const char* WIFI_PASS = "fy7271cs701vqg";
+const char* SERVER_HOST = "127.0.0.1"; //Enter server adress
+const uint16_t SERVER_PORT = 8080; // Enter server port
  
 WebServer server(80);
  
@@ -239,6 +246,27 @@ void control_rgb_led(void * no_params) {
   } // end while
 }
 
+void listen_for_action(void * no_params) {
+    Serial.println("listen for action");
+    bool connected = client.connect(SERVER_HOST, SERVER_PORT, "/");
+    if(connected) {
+        Serial.println("Connected to server port!");
+        client.send("Hello Server");
+    } else {
+        Serial.println("Not Connected to server port!");
+    }
+    client.onMessage([&](WebsocketsMessage message){
+        Serial.print("Got Message: ");
+        Serial.println(message.data());
+    });
+    while (true) {
+        if(client.available()) {
+            client.poll();
+        }
+        delay(500);
+    }
+}
+
 /**
  * @brief: Entry point to FreeRTOS framework
  */
@@ -270,6 +298,15 @@ void setup() {
     2048,
     NULL,
     2,
+    NULL,
+    app_cpu);
+    
+  xTaskCreatePinnedToCore(
+    listen_for_action,
+    "Listen for Action",
+    2048,
+    NULL,
+    1,
     NULL,
     app_cpu);
   

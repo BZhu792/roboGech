@@ -82,20 +82,19 @@ void control_stepper(void * no_params) {
   pinMode(STEPPER_IN2, OUTPUT);
   pinMode(STEPPER_IN3, OUTPUT);
   pinMode(STEPPER_IN4, OUTPUT);
-
   while (true) {
-     Serial.println("  next bin " + next_bin);
-     Serial.println("  curr bin " + current_bin);
+     Serial.printf("next bin %d\n", next_bin);
+     Serial.printf("curr bin %d\n", current_bin);
     if (next_bin != current_bin) {      
       // Calculate how many bins over the next bin is
       int moves = (current_bin <= next_bin) ? (next_bin - current_bin) : (next_bin + 4 - current_bin);
       
       // Move the stepper motor
       int num = (moves * NUMBER_OF_STEPS_PER_REV) / 4;
-      Serial.println("Num: " + num);
+      Serial.printf("Num: %d\n", num);
       
       for (int i = 0; i < num; i++) {
-//        Serial.println("i: " + i);
+        Serial.printf("i: " + i);
         stepper_onestep();
       }
 
