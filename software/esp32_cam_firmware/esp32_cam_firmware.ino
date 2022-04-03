@@ -88,7 +88,7 @@ static volatile led_status_t led_status = LED_IDLE;
 static bool set_timer = true;
 hw_timer_t * timer = NULL;
 
-void rgb_write(int red, int green, int blue);
+void rgb_write(int red, int green);
 void onTimer(void);
 
 
@@ -249,7 +249,7 @@ void setup() {
   xTaskCreatePinnedToCore(
     handle_cam_and_server,
     "Handle Camera and Server",
-    2048,
+    8192,
     NULL,
     5,// Highest Priority Task
     NULL,
