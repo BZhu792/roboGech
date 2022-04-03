@@ -11,20 +11,20 @@
 using namespace cv;
 using namespace dnn;
 
-float confThreshold, nmsThreshold;
-std::vector<std::string> classes;
-std::vector<String> outNames; // check up on this variable
+extern float confThreshold, nmsThreshold;
+extern std::vector<std::string> classes;
+extern std::vector<String> outNames; // check up on this variable
 
 inline void
 preprocess(const Mat &frame, Net &net, Size inpSize, float scale,
            const Scalar &mean, bool swapRB);
 
-vector<int> postprocess(Mat &frame, const std::vector<Mat> &out, Net &net, int backend);
+std::vector<int> postprocess(Mat &frame, const std::vector<Mat> &out, Net &net, int backend);
 
 void drawPred(int classId, int left, int top, int right, int bottom, Mat &frame);
 
 void callback(int pos, void *userdata);
 
-Net loadInModel(std::string modelPath, std::string configPath, std::string framework);
+Net loadInModel(std::string modelPath, std::string configPath, std::string framework, std::string class_names);
 
 std::vector<std::string> detect_object(Mat &frame, Net &net, int width, int height);

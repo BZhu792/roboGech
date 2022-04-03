@@ -117,7 +117,7 @@ void liveTransmission()
 void detectObjects()
 {
     namedWindow("Detection", WINDOW_AUTOSIZE);
-    Net nn = loadInModel("model path", "config path", "framework?");
+    Net nn = loadInModel("model path", "config path", "framework?", "classnames somehow");
 
     Mat img;
     while (true)

@@ -1,7 +1,11 @@
 #include "object_detection.h"
 
+float confThreshold, nmsThreshold;
+std::vector<std::string> classes;
+std::vector<String> outNames; // check up on this variable
+
 // get a model for usage
-Net loadInModel(std::string modelPath, std::string configPath, std::string framework)
+Net loadInModel(std::string modelPath, std::string configPath, std::string framework, std::string class_names)
 {
     Net net = readNet(modelPath, configPath, framework);
     net.setPreferableBackend(DNN_BACKEND_DEFAULT);
@@ -9,6 +13,16 @@ Net loadInModel(std::string modelPath, std::string configPath, std::string frame
 
     // remember to get these when needed. this is for getting the output i believe
     outNames = net.getUnconnectedOutLayersNames();
+
+    std::string file = class_names;
+    std::ifstream ifs(file.c_str());
+    if (!ifs.is_open())
+        CV_Error(Error::StsError, "File " + file + " not found");
+    std::string line;
+    while (std::getline(ifs, line))
+    {
+        classes.push_back(line);
+    }
 
     return net;
 }
@@ -39,7 +53,7 @@ inline void preprocess(const Mat &frame, Net &net, Size inpSize, float scale,
 
 // backend should always be DNN_BACKEND_DEFAULT, just cause
 // returns class ids, which can be used to index to the classes the objects detected are.
-vector<int> postprocess(Mat &frame, const std::vector<Mat> &outs, Net &net, int backend)
+std::vector<int> postprocess(Mat &frame, const std::vector<Mat> &outs, Net &net, int backend)
 {
     static std::vector<int> outLayers = net.getUnconnectedOutLayers();
     static std::string outLayerType = net.getLayer(outLayers[0])->type;
@@ -161,7 +175,7 @@ vector<int> postprocess(Mat &frame, const std::vector<Mat> &outs, Net &net, int 
     for (size_t idx = 0; idx < boxes.size(); ++idx)
     {
         Rect box = boxes[idx];
-        drawPred(classIds[idx], confidences[idx], box.x, box.y,
+        drawPred(classIds[idx], box.x, box.y,
                  box.x + box.width, box.y + box.height, frame);
     }
 
@@ -171,6 +185,7 @@ vector<int> postprocess(Mat &frame, const std::vector<Mat> &outs, Net &net, int 
 void drawPred(int classId, int left, int top, int right, int bottom, Mat &frame)
 {
     rectangle(frame, Point(left, top), Point(right, bottom), Scalar(0, 255, 0));
+    std::string label;
 
     if (!classes.empty())
     {
