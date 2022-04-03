@@ -1,6 +1,5 @@
 /**
- * @brief: ESP32 CAM firmware to control the self-sorting trashbin project.
- *         Handles image processing and server connection/upload, and controls stepper motor and RGB status LED.
+ * @brief: ESP32 CAM firmware to control image upload processing.
  *         Extended upon simple project from https://how2electronics.com/esp32-cam-based-object-detection-identification-with-opencv/ in a FreeRTOS setting
  *         
  * @setup: Follow instructions from https://how2electronics.com/esp32-cam-based-object-detection-identification-with-opencv/
@@ -44,52 +43,6 @@ void serveJpg(void);
 void handleJpgLo(void);
 void handleJpgHi(void);
 void handleJpgMid(void);
-
-/**
- * Stepper Motor
- */
-typedef enum {
-  RECYCLE_BIN         = 0,
-  COMPOST_BIN         = 1,
-  ELECTRONICS_BIN     = 2,
-  DEFAULT_BIN         = 3,
-  
-} bin_t;
-
-#define STEPPER_IN1 12
-#define STEPPER_IN2 13
-#define STEPPER_IN3 15 // GPIO pins 15 and 14 are swapped on the ESP32 CAM board
-#define STEPPER_IN4 14
-#define NUMBER_OF_STEPS_PER_REV 2048
-#define SCALE_FACTOR 1.03
-
-#include <Stepper.h>
-Stepper stepper = Stepper(NUMBER_OF_STEPS_PER_REV, STEPPER_IN1, STEPPER_IN2, STEPPER_IN3, STEPPER_IN4);
-
-static bin_t current_bin = DEFAULT_BIN;
-static volatile bin_t next_bin = ELECTRONICS_BIN;
-
-/**
- * RGB LED
- */
-typedef enum {
-  LED_IDLE    = 0,
-  LED_PENDING = 1,
-  LED_APPROVE = 2,
-  
-} led_status_t;
-
-#define RGB_RED   2
-#define RGB_GREEN 16
-#define LED_TIMEOUT_MS 5000
-
-static volatile led_status_t led_status = LED_IDLE;
-static bool set_timer = true;
-hw_timer_t * timer = NULL;
-
-void rgb_write(int red, int green);
-void onTimer(void);
-
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////
 // Task Functions
@@ -136,112 +89,6 @@ void handle_cam_and_server(void * no_params) {
 }
 
 /**
- * @brief: Receives bin movement commands and relays to the stepper motor
- * @param[in]: N/A -- need void pointer for FreeRTOS implementation
- */
-void control_stepper(void * no_params) {
-  // Set speed, 10 rpm is about the limit
-  stepper.setSpeed(10);
-
-  while (true) {
-    if (next_bin != current_bin) {      
-      // Calculate how many bins over the next bin is
-      int moves = (current_bin <= next_bin) ? (next_bin - current_bin) : (next_bin + 4 - current_bin);
-      
-      // Move the stepper motor
-      int steps = (int) SCALE_FACTOR * (moves * NUMBER_OF_STEPS_PER_REV) / 4;
-      stepper.step(steps);
-
-      // Update the current bin
-      current_bin = next_bin;
-    }
-  }
-}
-
-/**
- * @brief: Receives led status commands and relays to the RGB LED. Acts as a state machine based on LED status.
- * @param[in]: N/A -- need void pointer for FreeRTOS implementation
- */
-void control_rgb_led(void * no_params) {
-  pinMode(RGB_RED, OUTPUT);
-  pinMode(RGB_GREEN, OUTPUT);
-  
-  /* 1 tick take 1/(80MHZ/80) = 1us so we set divider 80 and count up */
-  timer = timerBegin(0, 80, true);
-  timerAttachInterrupt(timer, &onTimer, true);
-  timerAlarmWrite(timer, pdMS_TO_TICKS(LED_TIMEOUT_MS), true);
-
-  while (true) {
-    switch (led_status) {
-      case LED_IDLE:
-      {
-        // Display red
-        rgb_write(255, 0);
-
-        // Set timer flag to true in preparation for pending state
-        set_timer = true;
-        break;
-      }
-      
-      case LED_PENDING:
-      {
-        // If first time into this state (before exiting), set the detection timeout timer
-        if (set_timer)
-        {
-          timerAlarmEnable(timer);
-          set_timer = false;
-        }
-
-        // Display yellow
-        rgb_write(255, 255);
-        break;
-      }
-
-      case LED_APPROVE:
-      {
-        // Disable timeout timer
-        timerAlarmDisable(timer);
-
-        // Display green
-        rgb_write(0, 255);
-
-        // Delay task for 1 second
-        vTaskDelay(pdMS_TO_TICKS(1000));
-
-        // Move to idle
-        led_status = LED_IDLE;
-        break;
-      }
-
-      default:
-      {
-        // Should never get here
-        break;
-      }
-    } // end switch
-  } // end while
-}
-
-/**
- * @brief: Parses commands from the serial input and copies them into the corresponding volatile variables
- */
-void parse_serial_commands(void * no_params) {
-  String incoming_string = "";
-
-  while (true) {
-    while (!Serial.available());
-    incoming_string = Serial.readString();
-    
-    led_status = (led_status_t) incoming_string.substring(1,2).toInt();
-    if (led_status == LED_APPROVE) {
-      next_bin = (bin_t) incoming_string.substring(0, 1).toInt();
-    }
-
-    incoming_string = "";
-  }
-}
-
-/**
  * @brief: Entry point to FreeRTOS framework
  */
 void setup() {
@@ -257,33 +104,6 @@ void setup() {
     NULL,
     app_cpu);
 
-  xTaskCreatePinnedToCore(
-    control_stepper,
-    "Control Stepper",
-    2048,
-    NULL,
-    3,
-    NULL,
-    app_cpu);
-
-  xTaskCreatePinnedToCore(
-    control_rgb_led,
-    "Control RGB LED",
-    2048,
-    NULL,
-    2,
-    NULL,
-    app_cpu);
-
-  xTaskCreatePinnedToCore(
-    parse_serial_commands,
-    "Parse Serial Commands",
-    1024,
-    NULL,
-    1, // Lowest priority
-    NULL,
-    app_cpu);
-  
   vTaskDelete(NULL); // Delete setup() and loop() task
 }
 
@@ -350,22 +170,4 @@ void handleJpgMid(void)
     Serial.println("SET-MID-RES FAIL");
   }
   serveJpg();
-}
-
-/**
- * @brief: Dispatches write request to the RGB LED
- * @reference: https://create.arduino.cc/projecthub/muhammad-aqib/arduino-rgb-led-tutorial-fc003e
- * @param[in]: red - the red LED value
- * @param[in]: green - the green LED value
- */
-void rgb_write(int red, int green) {
-  analogWrite(RGB_RED, red);
-  analogWrite(RGB_GREEN, green);
-}
-
-/**
- * @brief: ISR for detection timeout, transitions LED status into LED_TIMEOUT
- */
-void IRAM_ATTR onTimer(void){
-  led_status = LED_IDLE;
 }
