@@ -224,6 +224,7 @@
 <smd name="P$9" x="-3.81" y="1.27" dx="1.27" dy="0.635" layer="1"/>
 <smd name="P$10" x="-3.81" y="0" dx="1.27" dy="0.635" layer="1"/>
 <smd name="P$11" x="-3.81" y="-1.27" dx="1.27" dy="0.635" layer="1"/>
+<smd name="P$5" x="-3.81" y="-2.54" dx="1.27" dy="0.635" layer="1"/>
 </package>
 <package name="MOCK_28BYJ-48">
 <description>FAKE FOOTPRINT</description>
@@ -481,14 +482,15 @@ Source: http://document.sharpsma.com/files/GM1WA55311A_SS.pdf</description>
 <pin name="B" x="22.86" y="15.24" length="middle" direction="out" rot="R180"/>
 <pin name="C" x="22.86" y="12.7" length="middle" direction="out" rot="R180"/>
 <pin name="D" x="22.86" y="10.16" length="middle" direction="out" rot="R180"/>
-<pin name="5V" x="-5.08" y="5.08" length="middle" direction="pwr"/>
-<pin name="GND" x="-5.08" y="2.54" length="middle" direction="pwr"/>
+<pin name="12V" x="-5.08" y="5.08" length="middle" direction="pwr"/>
+<pin name="5V" x="-5.08" y="2.54" length="middle" direction="pwr"/>
 <text x="0" y="20.32" size="1.778" layer="95">&gt;NAME</text>
 <text x="0" y="-2.54" size="1.778" layer="96">&gt;VALUE</text>
 <wire x1="0" y1="20.32" x2="0" y2="0" width="0.1524" layer="94"/>
 <wire x1="0" y1="0" x2="17.78" y2="0" width="0.1524" layer="94"/>
 <wire x1="17.78" y1="0" x2="17.78" y2="20.32" width="0.1524" layer="94"/>
 <wire x1="17.78" y1="20.32" x2="0" y2="20.32" width="0.1524" layer="94"/>
+<pin name="GND" x="22.86" y="2.54" length="middle" direction="pwr" rot="R180"/>
 </symbol>
 <symbol name="28BYJ-48">
 <description>Datasheet: https://components101.com/sites/default/files/component_datasheet/28byj48-step-motor-datasheet.pdf</description>
@@ -9710,16 +9712,17 @@ BUTTON</text>
 <devices>
 <device name="" package="MOCK_ULN2003_DRIVER">
 <connects>
+<connect gate="G$1" pin="12V" pad="P$9"/>
 <connect gate="G$1" pin="5V" pad="P$10"/>
-<connect gate="G$1" pin="A" pad="P$6"/>
-<connect gate="G$1" pin="B" pad="P$7"/>
-<connect gate="G$1" pin="C" pad="P$8"/>
-<connect gate="G$1" pin="D" pad="P$9"/>
+<connect gate="G$1" pin="A" pad="P$1"/>
+<connect gate="G$1" pin="B" pad="P$2"/>
+<connect gate="G$1" pin="C" pad="P$3"/>
+<connect gate="G$1" pin="D" pad="P$4"/>
 <connect gate="G$1" pin="GND" pad="P$11"/>
-<connect gate="G$1" pin="IN1" pad="P$1"/>
-<connect gate="G$1" pin="IN2" pad="P$2"/>
-<connect gate="G$1" pin="IN3" pad="P$3"/>
-<connect gate="G$1" pin="IN4" pad="P$4"/>
+<connect gate="G$1" pin="IN1" pad="P$5"/>
+<connect gate="G$1" pin="IN2" pad="P$6"/>
+<connect gate="G$1" pin="IN3" pad="P$7"/>
+<connect gate="G$1" pin="IN4" pad="P$8"/>
 </connects>
 <technologies>
 <technology name=""/>
