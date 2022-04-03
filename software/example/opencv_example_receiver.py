@@ -46,6 +46,7 @@ def run2():
 
         bbox, label, conf = cv.detect_common_objects(im)
         im = draw_bbox(im, bbox, label, conf)
+        determineStates(label)
 
         cv2.imshow('detection', im)
         key = cv2.waitKey(5)
@@ -55,14 +56,14 @@ def run2():
     cv2.destroyAllWindows()
 
 
-def determineStates(labels):  # the server is assumed to be active
+def determineStates(label):  # the server is assumed to be active
     compost_states = ["banana", "apple", "sandwich", "orange",
                       "broccoli", "carrot", "hot dog", "pizza", "donut", "cake"]
     electronic_states = ["laptop", "mouse", "remote",
                          "keyboard", "cell phone", "microwave", "oven", "toaster"]
     recycling_states = ["wine glass", "cup", "fork", "knife", "spoon", "bowl"]
     total_states = compost_states + electronic_states + recycling_states
-    for state in labels:
+    for state in label:
         if state in total_states:
             if state in compost_states:
                 sendSignal(conn, TrashState.COMPOST)
