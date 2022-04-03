@@ -60,14 +60,14 @@ typedef enum {
 #define STEPPER_IN2 13
 #define STEPPER_IN3 15 // GPIO pins 15 and 14 are swapped on the ESP32 CAM board
 #define STEPPER_IN4 14
-#define NUMBER_OF_STEPS_PER_REV 512
-#define DELAY_MS_PER_STEP 5
+#define NUMBER_OF_STEPS_PER_REV 2048
+#define SCALE_FACTOR 1.03
+
+#include <Stepper.h>
+Stepper stepper = Stepper(NUMBER_OF_STEPS_PER_REV, STEPPER_IN1, STEPPER_IN2, STEPPER_IN3, STEPPER_IN4);
 
 static bin_t current_bin = DEFAULT_BIN;
-static volatile bin_t next_bin    = DEFAULT_BIN;
-
-void stepper_write(int in1, int in2, int in3, int in4);
-void stepper_onestep(void);
+static volatile bin_t next_bin    = CAN_BIN;
 
 /**
  * RGB LED
@@ -81,8 +81,7 @@ typedef enum {
 } led_status_t;
 
 #define RGB_RED   2
-#define RGB_GREEN 4
-#define RGB_BLUE  16
+#define RGB_GREEN 16
 #define LED_TIMEOUT_MS 5000
 
 static volatile led_status_t led_status = LED_IDLE;
@@ -142,20 +141,18 @@ void handle_cam_and_server(void * no_params) {
  * @param[in]: N/A -- need void pointer for FreeRTOS implementation
  */
 void control_stepper(void * no_params) {
-  pinMode(STEPPER_IN1, OUTPUT);
-  pinMode(STEPPER_IN2, OUTPUT);
-  pinMode(STEPPER_IN3, OUTPUT);
-  pinMode(STEPPER_IN4, OUTPUT);
+
+  // Set speed, 10 rpm is about the limit
+  stepper.setSpeed(10);
 
   while (true) {
-    if (next_bin != current_bin) {
+    if (next_bin != current_bin) {      
       // Calculate how many bins over the next bin is
       int moves = (current_bin <= next_bin) ? (next_bin - current_bin) : (next_bin + 4 - current_bin);
       
       // Move the stepper motor
-      for (int i = 0; i < (moves * NUMBER_OF_STEPS_PER_REV) / 4; i++) {
-        stepper_onestep();
-      }
+      int steps = (int) SCALE_FACTOR * (moves * NUMBER_OF_STEPS_PER_REV) / 4;
+      stepper.step(steps);
 
       // Update the current bin
       current_bin = next_bin;
@@ -171,7 +168,6 @@ void control_stepper(void * no_params) {
 void control_rgb_led(void * no_params) {
   pinMode(RGB_RED, OUTPUT);
   pinMode(RGB_GREEN, OUTPUT);
-  pinMode(RGB_BLUE, OUTPUT);
   
   /* 1 tick take 1/(80MHZ/80) = 1us so we set divider 80 and count up */
   timer = timerBegin(0, 80, true);
@@ -182,8 +178,8 @@ void control_rgb_led(void * no_params) {
     switch (led_status) {
       case LED_IDLE:
       {
-        // Display white
-        rgb_write(255, 255, 255);
+        // Display nothing (black)
+        rgb_write(0, 0);
 
         // Set timer flag to true in preparation for pending state
         set_timer = true;
@@ -200,7 +196,7 @@ void control_rgb_led(void * no_params) {
         }
 
         // Display yellow
-        rgb_write(255, 255, 0);
+        rgb_write(255, 255);
         break;
       }
 
@@ -208,7 +204,7 @@ void control_rgb_led(void * no_params) {
       {
         // Will only enter this state if the timer went off
         // Display red
-        rgb_write(255, 0, 0);
+        rgb_write(255, 0);
 
         // Delay task for 1 second
         vTaskDelay(pdMS_TO_TICKS(1000));
@@ -224,7 +220,7 @@ void control_rgb_led(void * no_params) {
         timerAlarmDisable(timer);
 
         // Display green
-        rgb_write(0, 255, 0);
+        rgb_write(0, 255);
 
         // Delay task for 1 second
         vTaskDelay(pdMS_TO_TICKS(1000));
@@ -268,7 +264,6 @@ void setup() {
     NULL,
     app_cpu);
 
-    
   xTaskCreatePinnedToCore(
     control_rgb_led,
     "Control RGB LED",
@@ -347,54 +342,14 @@ void handleJpgMid(void)
 }
 
 /**
- * @brief: Performs a single write to each of the stepper motor control pins
- * @reference: https://create.arduino.cc/projecthub/debanshudas23/getting-started-with-stepper-motor-28byj-48-3de8c9
- * @param[in]: in1 - the value for the in1 pin
- * @param[in]: in2 - the value for the in2 pin
- * @param[in]: in3 - the value for the in3 pin
- * @param[in]: in4 - the value for the in4 pin
- */
-void stepper_write(int in1, int in2, int in3, int in4) {
-  digitalWrite(STEPPER_IN1, in1);
-  digitalWrite(STEPPER_IN2, in2);
-  digitalWrite(STEPPER_IN3, in3);
-  digitalWrite(STEPPER_IN4, in4);
-}
-
-/**
- * @brief: Moves the stepper motor one step
- * @reference: https://create.arduino.cc/projecthub/debanshudas23/getting-started-with-stepper-motor-28byj-48-3de8c9
- */
-void stepper_onestep(void) {
-  stepper_write(1,0,0,0);
-  vTaskDelay(pdMS_TO_TICKS(DELAY_MS_PER_STEP));
-  stepper_write(1,1,0,0);
-  vTaskDelay(pdMS_TO_TICKS(DELAY_MS_PER_STEP));
-  stepper_write(0,1,0,0);
-  vTaskDelay(pdMS_TO_TICKS(DELAY_MS_PER_STEP));
-  stepper_write(0,1,1,0);
-  vTaskDelay(pdMS_TO_TICKS(DELAY_MS_PER_STEP));
-  stepper_write(0,0,1,0);
-  vTaskDelay(pdMS_TO_TICKS(DELAY_MS_PER_STEP));
-  stepper_write(0,0,1,1);
-  vTaskDelay(pdMS_TO_TICKS(DELAY_MS_PER_STEP));
-  stepper_write(0,0,0,1);
-  vTaskDelay(pdMS_TO_TICKS(DELAY_MS_PER_STEP));
-  stepper_write(1,0,0,1);
-  vTaskDelay(pdMS_TO_TICKS(DELAY_MS_PER_STEP));
-}
-
-/**
  * @brief: Dispatches write request to the RGB LED
  * @reference: https://create.arduino.cc/projecthub/muhammad-aqib/arduino-rgb-led-tutorial-fc003e
  * @param[in]: red - the red LED value
  * @param[in]: green - the green LED value
- * @param[in]: blue - the blue LED value
  */
-void rgb_write(int red, int green, int blue) {
+void rgb_write(int red, int green) {
   analogWrite(RGB_RED, red);
   analogWrite(RGB_GREEN, green);
-  analogWrite(RGB_BLUE, blue);
 }
 
 /**
