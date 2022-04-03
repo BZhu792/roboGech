@@ -7,6 +7,9 @@ import urllib.request
 import numpy as np
 from cvlib.object_detection import draw_bbox
 import concurrent.futures
+import serial
+import time
+arduino = serial.Serial(port='COM4', baudrate=115200, timeout=.1)
 
 url = 'http://172.20.10.2/cam-hi.jpg'
 im = None
@@ -14,12 +17,18 @@ im = None
 HOST = "something"
 PORT = 3000
 
+first_frame = 1
+
 
 class TrashState(Enum):
-    TRASH = 0
-    ELECTRONIC = 1
-    RECYCLING = 2
-    COMPOST = 3
+    RECYCLING = 0
+    COMPOST = 1
+    ELECTRONIC = 2
+    TRASH = 3
+
+class LedState(Enum):
+    LED_PENDING = 1,
+    LED_APPROVE = 2,
 
 
 def run1():
@@ -46,7 +55,8 @@ def run2():
 
         bbox, label, conf = cv.detect_common_objects(im)
         im = draw_bbox(im, bbox, label, conf)
-        determineStates(label)
+        if diff(im):
+            determineStates(label)
 
         cv2.imshow('detection', im)
         key = cv2.waitKey(5)
@@ -55,24 +65,43 @@ def run2():
 
     cv2.destroyAllWindows()
 
+def diff(im):
+    if first_frame:
+        before = np.array(im)
+        first_frame = 0
+    threshold = 30
+    now = np.array(im)
+    mse = np.mean((now - before)**2)
+    print(mse)
+    before = now
 
-def determineStates(label):  # the server is assumed to be active
+    if  mse > threshold:
+        return True
+    return False
+
+
+
+def determineStates(label): 
     compost_states = ["banana", "apple", "sandwich", "orange",
                       "broccoli", "carrot", "hot dog", "pizza", "donut", "cake"]
     electronic_states = ["laptop", "mouse", "remote",
                          "keyboard", "cell phone", "microwave", "oven", "toaster"]
     recycling_states = ["wine glass", "cup", "fork", "knife", "spoon", "bowl"]
     total_states = compost_states + electronic_states + recycling_states
+    if len(label) == 0:
+        arduino.write(bytes('0' + str(LedState.LED_PENDING), 'utf-8'))
+        return
     for state in label:
         if state in total_states:
             if state in compost_states:
-                sendSignal(conn, TrashState.COMPOST)
+                det_state = TrashState.COMPOST
             elif state in electronic_states:
-                sendSignal(conn, TrashState.ELECTRONIC)
+                det_state = TrashState.ELECTRONIC
             elif state in recycling_states:
-                sendSignal(conn, TrashState.RECYCLING)
-            else:
-                sendSignal(conn, TrashState.TRASH)
+                det_state = TrashState.RECYCLING
+        else:
+            det_state = TrashState.TRASH
+    arduino.write(bytes(str(det_state) + str(LedState.LED_APPROVE), 'utf-8'))
 
 
 def connectToServer():
