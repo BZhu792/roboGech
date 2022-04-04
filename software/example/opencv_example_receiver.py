@@ -17,7 +17,7 @@ compost_states = ["banana", "apple", "sandwich", "orange",
                     "broccoli", "carrot", "hot dog", "pizza", "donut", "cake"]
 electronic_states = ["laptop", "mouse", "remote",
                         "keyboard", "cell phone", "microwave", "oven", "toaster"]
-recycling_states = ["wine glass", "cup", "fork", "knife", "spoon", "bowl"]
+recycling_states = ["wine glass", "bottle", "cup", "fork", "knife", "spoon", "bowl"]
 
 class TrashState(Enum):
     RECYCLING = 0
@@ -43,7 +43,7 @@ def run1():
 
 
 def run2():
-    arduino = serial.Serial(port='COM5', baudrate=115200, timeout=None)
+    arduino = serial.Serial(port='COM8', baudrate=115200, timeout=None)
 
     cv2.namedWindow("detection", cv2.WINDOW_AUTOSIZE)
     while True:
@@ -60,6 +60,8 @@ def run2():
             break
 
         label = [value for value in label if value != "person"]
+        label = [value for value in label if value != "backpack"]
+        label = [value for value in label if value != "sports ball"]
 
         if len(label) > 0:
             if label[0] in compost_states:
